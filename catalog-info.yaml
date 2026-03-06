@@ -1,20 +1,23 @@
-apiVersion: backstage.io/v1alpha1
+apiVersion: harness.io/v1
 kind: Component
 metadata:
-  name: public-cloud-security-groups
-  title: Public Cloud Security Groups
+  identifier: public-cloud-security-groups
+  name: Public Cloud Security Groups
+  orgIdentifier: default
+  projectIdentifier: platform_engineering
   description: >
-    Harness IDP plugin and scaffolder template for managing Infrastructure
-    Security Groups across Public Cloud accounts. Supports rule management,
-    ServiceNow RITM ticket creation, and CSV export.
-  annotations:
-    backstage.io/source-location: url:https://github.com/rohiddev/harness-idp-public-cloud-security-groups
+    Harness IDP plugin and workflow for managing Infrastructure Security Groups
+    across Public Cloud accounts. Supports rule management, ServiceNow RITM
+    ticket creation, and CSV export.
   tags:
     - public-cloud
     - security
     - aws
     - infrastructure
     - plugin
+  annotations:
+    backstage.io/source-location: url:https://github.com/rohiddev/harness-idp-public-cloud-security-groups
+    github.com/project-slug: rohiddev/harness-idp-public-cloud-security-groups
 spec:
   type: plugin
   lifecycle: experimental

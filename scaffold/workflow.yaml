@@ -1,8 +1,10 @@
-apiVersion: scaffolder.backstage.io/v1beta3
-kind: Template
+apiVersion: harness.io/v1
+kind: Workflow
 metadata:
-  name: infra-security-group-request
-  title: Infrastructure Security Group Request
+  identifier: infra-security-group-request
+  name: Infrastructure Security Group Request
+  orgIdentifier: default
+  projectIdentifier: platform_engineering
   description: >
     Submit an Infrastructure Security Group request for Public Cloud accounts.
     Select your account, region, and application — then manage security group rules
