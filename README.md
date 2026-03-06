@@ -31,12 +31,19 @@ open preview.html
 
 ## Harness IDP 2.0 Compliance
 
-This repo has been updated for Harness IDP 2.0:
+This repo is fully compliant with Harness IDP 2.0:
 
 | File | Change |
 |---|---|
 | `scaffold/workflow.yaml` | Renamed from `template.yaml`. Uses `apiVersion: harness.io/v1` and `kind: Workflow` |
-| `catalog-info.yaml` | Uses `harness.io/v1`, added `identifier`, `orgIdentifier`, `projectIdentifier` |
+| `scaffold/workflow.yaml` | `type` and `owner` promoted to root level — not under `spec` |
+| `catalog-info.yaml` | Uses `harness.io/v1`, `identifier: public_cloud_security_groups` (underscores, no hyphens) |
+| `catalog-info.yaml` | `type` and `owner` at root level, `owner: platform_engineering` |
+
+**IDP 2.0 identifier rules:**
+- `identifier` fields must use letters, numbers, and underscores only — **no hyphens**
+- `owner` references follow the same rule — `platform_engineering` not `platform-engineering`
+- `type` and `owner` are root-level fields, not nested under `spec`
 
 > **API sunset:** Backstage-native APIs are deprecated as of October 2025. All catalog and workflow APIs now go through Harness Platform APIs.
 
