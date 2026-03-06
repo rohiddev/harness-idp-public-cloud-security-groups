@@ -1,0 +1,147 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: infra-security-group-request
+  title: Infrastructure Security Group Request
+  description: >
+    Submit an Infrastructure Security Group request for Public Cloud accounts.
+    Select your account, region, and application — then manage security group rules
+    and submit a ServiceNow RITM ticket.
+  tags:
+    - public-cloud
+    - security
+    - aws
+    - infrastructure
+spec:
+  owner: platform-engineering
+  type: service
+
+  parameters:
+    - title: Infrastructure Security Group — Step 1
+      description: Infrastructure Security Group Step 1 form
+      required:
+        - account
+      properties:
+        applicationId:
+          title: What is your application ID?
+          type: string
+          description: Your application system ID (e.g. SYSID-06534)
+          ui:placeholder: "e.g. SYSID-06534"
+
+        applicationName:
+          title: What is your Application Name?
+          type: string
+          description: Full name of your application (e.g. OpenShift (PaaS) - AWS)
+          ui:placeholder: "e.g. OpenShift (PaaS) - AWS"
+
+        account:
+          title: Please select an account
+          type: string
+          description: Select the AWS account for the security group
+          enum:
+            - cfg-edo-dev
+            - cfg-edo-staging
+            - cfg-edo-prod
+            - cfg-paas-dev
+            - cfg-paas-prod
+            - cfg-shared-services
+          ui:widget: select
+
+        region:
+          title: Select a region
+          type: string
+          description: AWS region where the security group lives
+          enum:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+            - eu-west-1
+            - eu-west-2
+            - eu-central-1
+            - ap-southeast-1
+            - ap-southeast-2
+          default: us-east-1
+          ui:widget: select
+
+        existingRitm:
+          title: Only for updating an existing RITM? (optional)
+          type: string
+          description: Leave as None if this is a new request
+          default: None
+          enum:
+            - None
+            - RITM0010001
+            - RITM0010002
+            - RITM0010003
+          ui:widget: select
+
+    - title: Security Group Rules
+      description: Define the inbound and outbound rules for your security group
+      properties:
+        ruleDescription:
+          title: Rule Description
+          type: string
+          description: Brief description of the rule change being requested
+          ui:widget: textarea
+          ui:options:
+            rows: 4
+          ui:placeholder: "e.g. Allow HTTPS inbound from corporate VPN range 10.100.0.0/16 on port 443"
+
+        justification:
+          title: Business Justification
+          type: string
+          description: Why is this security group change needed?
+          ui:widget: textarea
+          ui:options:
+            rows: 3
+          ui:placeholder: "e.g. Required for new microservice deployment in Q1 release"
+
+        approver:
+          title: Security Approver Email
+          type: string
+          description: Email of the security team approver
+          ui:placeholder: "security-team@company.com"
+          format: email
+
+  steps:
+    - id: log-request
+      name: Log Security Group Request
+      action: debug:log
+      input:
+        message: |
+          Security Group Request submitted:
+          - Application ID: ${{ parameters.applicationId }}
+          - Application Name: ${{ parameters.applicationName }}
+          - Account: ${{ parameters.account }}
+          - Region: ${{ parameters.region }}
+          - Existing RITM: ${{ parameters.existingRitm }}
+          - Rule: ${{ parameters.ruleDescription }}
+          - Justification: ${{ parameters.justification }}
+          - Approver: ${{ parameters.approver }}
+
+    - id: trigger-workflow
+      name: Trigger Security Group Workflow
+      action: github:actions:dispatch
+      input:
+        repoUrl: github.com?repo=platform-idp-workflows&owner=YOUR_ORG
+        workflowId: update-security-group.yml
+        branchOrTagName: main
+        workflowInputs:
+          application_id: ${{ parameters.applicationId }}
+          application_name: ${{ parameters.applicationName }}
+          account: ${{ parameters.account }}
+          region: ${{ parameters.region }}
+          existing_ritm: ${{ parameters.existingRitm }}
+          rule_description: ${{ parameters.ruleDescription }}
+          justification: ${{ parameters.justification }}
+          approver: ${{ parameters.approver }}
+
+  output:
+    links:
+      - title: View in ServiceNow
+        icon: dashboard
+        url: https://yourcompany.service-now.com/nav_to.do?uri=sc_req_item_list.do
+      - title: Security Group Update Docs
+        icon: docs
+        url: https://confluence.yourcompany.com/display/PLAT/security-groups
