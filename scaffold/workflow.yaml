@@ -1,8 +1,10 @@
 apiVersion: harness.io/v1
 kind: Workflow
+identifier: infra_security_group_request
+name: Infrastructure Security Group Request
+type: service
+owner: platform_engineering
 metadata:
-  identifier: infra_security_group_request
-  name: Infrastructure Security Group Request
   orgIdentifier: default
   projectIdentifier: platform_engineering
   description: >
@@ -14,8 +16,6 @@ metadata:
     - security
     - aws
     - infrastructure
-type: service
-owner: platform_engineering
 spec:
   parameters:
     - title: Infrastructure Security Group — Step 1

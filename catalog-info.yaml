@@ -1,8 +1,10 @@
 apiVersion: harness.io/v1
 kind: Component
+identifier: public_cloud_security_groups
+name: Public Cloud Security Groups
+type: plugin
+owner: platform_engineering
 metadata:
-  identifier: public_cloud_security_groups
-  name: Public Cloud Security Groups
   orgIdentifier: default
   projectIdentifier: platform_engineering
   description: >
@@ -18,7 +20,5 @@ metadata:
   annotations:
     backstage.io/source-location: url:https://github.com/rohiddev/harness-idp-public-cloud-security-groups
     github.com/project-slug: rohiddev/harness-idp-public-cloud-security-groups
-type: plugin
-owner: platform_engineering
 spec:
   lifecycle: experimental
