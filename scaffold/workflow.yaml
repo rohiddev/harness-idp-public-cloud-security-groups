@@ -16,6 +16,10 @@ metadata:
     - security
     - aws
     - infrastructure
+  icon: shield
+  actionButton:
+    intent: warning
+    text: Request
 spec:
   parameters:
     - title: Infrastructure Security Group — Step 1
