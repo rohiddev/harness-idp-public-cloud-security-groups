@@ -1,0 +1,560 @@
+apiVersion: harness.io/v1
+kind: Workflow
+identifier: platform_public_cloud_onboarding
+name: Public Cloud — Infrastructure Pattern Fitment
+type: service
+owner: platform_engineering
+metadata:
+  orgIdentifier: default
+  projectIdentifier: cfg-IDP-project
+  description: >
+    Self-service public cloud onboarding. Captures infrastructure pattern fitment,
+    cloud type, database requirements, and approver details for cloud architect review.
+  tags:
+    - public-cloud
+    - aws
+    - infrastructure
+    - onboarding
+    - self-service
+  icon: cloud
+  actionButton:
+    intent: warning
+    text: Submit
+
+spec:
+
+  # ════════════════════════════════════════════════════════════════════════
+  # FIELD CHAIN
+  #
+  #  applicationId — SYS ID (SYSID-#####)
+  #
+  #  Migration toggles (5 booleans — independent)
+  #
+  #  knowsPattern → pattern dropdown (dependencies.knowsPattern)
+  #
+  #  requestorEmail, cloudArchitectEmail, assignmentGroup (optional)
+  #  isbiaRiskRating — dropdown
+  #  port — optional
+  #
+  # PAGE 2:
+  #  adGroupDelegators (optional)
+  #  sameApproversForAll — boolean
+  #  cloudType — dropdown
+  #  deploymentDivision — dropdown
+  #  usesDatabase → databaseType, dbEngine, replicationRegion (dependencies.usesDatabase)
+  #  publicFacing — dropdown
+  #  createJiraStories — boolean
+  #
+  # PAGE 3:
+  #  support — email
+  #  departmentNumber (optional)
+  #  dataClass — dropdown
+  #  criticality — dropdown
+  #  riskPartnersNid — 7-digit NID
+  #  domain — dropdown
+  #  adGroupPrimaryApprover — corp/ prefix, 12 chars
+  #  adGroupSecondaryApprover — corp/ prefix, 12 chars
+  # ════════════════════════════════════════════════════════════════════════
+
+  parameters:
+
+    # ──────────────────────────────────────────────────────────────────────
+    # PAGE 1 — Application Identity & Infrastructure Pattern
+    # ──────────────────────────────────────────────────────────────────────
+    - title: Application & Infrastructure Pattern
+      description: >
+        Enter your application SYS ID, answer the migration questions, and provide
+        your cloud architect and requestor details.
+
+      required:
+        - applicationId
+        - requestorEmail
+        - cloudArchitectEmail
+        - isbiaRiskRating
+
+      properties:
+
+        token:
+          title: Harness Token
+          type: string
+          ui:widget: password
+          ui:field: HarnessAuthToken
+
+        # ── SYS ID ────────────────────────────────────────────────────────
+        applicationId:
+          title: 'What is your application ID? *'
+          type: string
+          description: 'Format: SYSID-##### — 5-digit number after the prefix'
+          default: 'SYSID-'
+          ui:autofocus: true
+          ui:placeholder: 'Application ID - e.g. SYSID-06534'
+          pattern: '^SYSID-[0-9]{5}$'
+          minLength: 11
+          maxLength: 11
+
+        # ── Migration toggles ─────────────────────────────────────────────
+        migratingFromOnPrem:
+          title: 'Is this application migrating from on-prem?'
+          type: boolean
+          description: 'Select Yes if the application is migrating from an on-premises environment'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        migratingFromLegacyToBifrost:
+          title: 'Is this application migrating from legacy to bifrost?'
+          type: boolean
+          description: 'Select Yes if the application is moving from a legacy system to Bifrost'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        migratingFromWorkloadToBifrost:
+          title: 'Is this application migrating from workload to bifrost?'
+          type: boolean
+          description: 'Select Yes if the workload is being migrated to the Bifrost platform'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        hasAppOrWebServer:
+          title: 'Does this application have an app or web server?'
+          type: boolean
+          description: 'Select Yes if the application includes an application server or web server tier'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        knowsPattern:
+          title: 'Do you know which standard pattern matches your application?'
+          type: boolean
+          description: 'Select Yes to choose an infrastructure pattern — otherwise Platform Engineering will assist'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        # ── Requestor & Architect ─────────────────────────────────────────
+        requestorEmail:
+          title: 'Who is the assigned user requesting onboard of this application? *'
+          type: string
+          description: 'Email address of the team member submitting this request'
+          ui:placeholder: 'Requestor Email - e.g. john.doe@citizensbank.com'
+          format: email
+
+        cloudArchitectEmail:
+          title: 'Who is the assigned cloud architect to approve the onboard of the application? *'
+          type: string
+          description: 'Email address of the cloud architect who will review and approve'
+          ui:placeholder: 'Cloud Architect Email - e.g. arch.name@citizensbank.com'
+          format: email
+
+        assignmentGroup:
+          title: 'Assignment Group (Optional)'
+          type: string
+          description: 'ServiceNow assignment group for this request — leave blank if unknown'
+          ui:placeholder: 'Assignment Group - e.g. Cloud Platform Engineering'
+
+        isbiaRiskRating:
+          title: 'What is your ISBIA risk rating for this app? *'
+          type: string
+          description: 'Select the ISBIA information security risk rating assigned to this application'
+          enum:
+            - 'Critical'
+            - 'High'
+            - 'Medium'
+            - 'Low'
+          ui:widget: select
+
+        port:
+          title: 'Port'
+          type: string
+          description: 'Primary application port number (optional)'
+          ui:placeholder: 'Port - e.g. 8080'
+          pattern: '^[0-9]{1,5}$'
+
+      # ── Pattern dropdown — conditional on knowsPattern = true ──────────
+      dependencies:
+        knowsPattern:
+          allOf:
+            - if:
+                properties:
+                  knowsPattern:
+                    const: true
+                required:
+                  - knowsPattern
+              then:
+                required:
+                  - pattern
+                properties:
+                  pattern:
+                    title: 'Select a Pattern *'
+                    type: string
+                    description: 'Select the infrastructure pattern that best matches your application architecture'
+                    enum:
+                      - '2/1 Tier Pattern'
+                      - '3 Tier Pattern'
+                      - 'Microservices Pattern'
+                      - 'Event-Driven Pattern'
+                      - 'Serverless Pattern'
+                      - 'Data Platform Pattern'
+                    ui:widget: select
+                    ui:backstage:
+                      review:
+                        show: true
+
+    # ──────────────────────────────────────────────────────────────────────
+    # PAGE 2 — Cloud Configuration & Database
+    # ──────────────────────────────────────────────────────────────────────
+    - title: Cloud Configuration & Database
+      description: >
+        Select your cloud provider, deployment division, and database requirements.
+
+      required:
+        - cloudType
+        - deploymentDivision
+        - publicFacing
+
+      properties:
+
+        # ── AD Group Delegators ───────────────────────────────────────────
+        adGroupDelegators:
+          title: 'Enter Your AD Groups Delegators EmployeeIDs separated with comma (optional)'
+          type: string
+          description: 'Comma-separated list of Employee IDs for AD group delegators — leave blank if none'
+          ui:placeholder: 'AD Group Delegators - e.g. 1234567, 7654321'
+
+        # ── Same approvers toggle ─────────────────────────────────────────
+        sameApproversForAll:
+          title: 'Will approvers be the same for all these applications? (Terraform, Jenkins, Windows Access)'
+          type: boolean
+          description: 'Select Yes if the same approvers apply to Terraform, Jenkins, and Windows Access requests'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        # ── Cloud Type ────────────────────────────────────────────────────
+        cloudType:
+          title: 'Select your cloudType *'
+          type: string
+          description: 'Public cloud provider where infrastructure will be provisioned'
+          enum:
+            - 'AWS'
+            - 'Azure'
+            - 'GCP'
+          ui:widget: select
+
+        # ── Deployment Division ───────────────────────────────────────────
+        deploymentDivision:
+          title: 'Select deployment division? (this is where the infra will be built) *'
+          type: string
+          description: 'Business division that owns the infrastructure — determines account placement'
+          enum:
+            - 'Colleaguetech'
+            - 'Consumer Banking'
+            - 'Commercial Banking'
+            - 'Enterprise Technology'
+            - 'Risk & Compliance'
+            - 'Finance'
+          ui:widget: select
+
+        # ── Database toggle ───────────────────────────────────────────────
+        usesDatabase:
+          title: 'Does it use a database?'
+          type: boolean
+          description: 'Select Yes if this application requires a managed database service'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+        # ── Public facing ─────────────────────────────────────────────────
+        publicFacing:
+          title: 'Is your application public facing? *'
+          type: string
+          description: 'Select Yes if the application is accessible from the public internet'
+          enum:
+            - 'Yes'
+            - 'No'
+          ui:widget: select
+
+        # ── Jira stories toggle ───────────────────────────────────────────
+        createJiraStories:
+          title: 'Do you want to create Jira stories on your board for next step customer actions?'
+          type: boolean
+          description: 'Select Yes to auto-create Jira stories for post-onboarding action items'
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+
+      # ── Database fields — conditional on usesDatabase = true ───────────
+      dependencies:
+        usesDatabase:
+          allOf:
+            - if:
+                properties:
+                  usesDatabase:
+                    const: true
+                required:
+                  - usesDatabase
+              then:
+                required:
+                  - databaseType
+                  - dbEngine
+                  - replicationRegion
+                properties:
+                  databaseType:
+                    title: 'What type of database are you using? *'
+                    type: string
+                    description: 'Select the category of database used by your application'
+                    enum:
+                      - 'Relational DB'
+                      - 'NoSQL'
+                      - 'In-Memory'
+                      - 'Data Warehouse'
+                      - 'Time Series'
+                    ui:widget: select
+                    ui:backstage:
+                      review:
+                        show: true
+                  dbEngine:
+                    title: 'What is the DB Engine? *'
+                    type: string
+                    description: 'Select the specific database engine or service'
+                    enum:
+                      - 'MSSQL'
+                      - 'PostgreSQL'
+                      - 'MySQL'
+                      - 'Oracle'
+                      - 'MongoDB'
+                      - 'DynamoDB'
+                      - 'Redis'
+                      - 'Aurora'
+                    ui:widget: select
+                    ui:backstage:
+                      review:
+                        show: true
+                  replicationRegion:
+                    title: 'Replication Region *'
+                    type: string
+                    description: 'AWS region for database replication / standby'
+                    enum:
+                      - 'us-east-1'
+                      - 'us-east-2'
+                      - 'us-west-1'
+                      - 'us-west-2'
+                      - 'eu-west-1'
+                      - 'eu-central-1'
+                      - 'ap-southeast-1'
+                      - 'ap-southeast-2'
+                    ui:widget: select
+                    ui:backstage:
+                      review:
+                        show: true
+
+    # ──────────────────────────────────────────────────────────────────────
+    # PAGE 3 — Governance & AD Group Approvers
+    # ──────────────────────────────────────────────────────────────────────
+    - title: Governance & Approvers
+      description: >
+        Provide support contact, data governance details, and AD group approvers.
+        Primary and Secondary Approver network IDs must be prefixed with corp/ and be 12 characters total.
+
+      required:
+        - support
+        - dataClass
+        - criticality
+        - riskPartnersNid
+        - domain
+        - adGroupPrimaryApprover
+        - adGroupSecondaryApprover
+
+      properties:
+
+        # ── Support ───────────────────────────────────────────────────────
+        support:
+          title: 'Support *'
+          type: string
+          description: 'Support distribution list or email for this application — used for incident routing'
+          ui:placeholder: 'Support - e.g. DL-TeamName@citizensbank.com'
+
+        # ── Department Number ─────────────────────────────────────────────
+        departmentNumber:
+          title: 'Department Number (i.e. Business Unit) (optional)'
+          type: string
+          description: 'Cost centre or business unit number for charge-back purposes'
+          ui:placeholder: 'Department Number - e.g. 12345'
+
+        # ── Data Class ────────────────────────────────────────────────────
+        dataClass:
+          title: 'Data Class *'
+          type: string
+          description: 'Information classification of data processed by this application'
+          enum:
+            - 'Public'
+            - 'Internal'
+            - 'Confidential'
+            - 'Restricted'
+          ui:widget: select
+
+        # ── Criticality ───────────────────────────────────────────────────
+        criticality:
+          title: 'Criticality *'
+          type: string
+          description: 'Business criticality tier for this application — determines SLA and recovery targets'
+          enum:
+            - 'Tier 1'
+            - 'Tier 2'
+            - 'Tier 3'
+          ui:widget: select
+
+        # ── Risk Partners NID ─────────────────────────────────────────────
+        riskPartnersNid:
+          title: 'What is your risk partners (NID)? *'
+          type: string
+          description: 'Network ID of the assigned risk partner — must be exactly 7 digits'
+          ui:placeholder: 'Risk Partners NID - e.g. 1234567'
+          pattern: '^[0-9]{7}$'
+          minLength: 7
+          maxLength: 7
+
+        # ── Domain ────────────────────────────────────────────────────────
+        domain:
+          title: 'Which domain will you be using? *'
+          type: string
+          description: 'Active Directory domain for this application'
+          enum:
+            - 'Branch'
+            - 'Corp'
+            - 'DMZ'
+            - 'Cloud'
+          ui:widget: select
+
+        # ── Primary Approver ──────────────────────────────────────────────
+        adGroupPrimaryApprover:
+          title: 'Enter your AD groups Primary Approver *'
+          type: string
+          description: 'Primary approver network ID — must be prefixed with corp/ and be exactly 12 characters (e.g. corp/jdoe123)'
+          default: 'corp/'
+          ui:placeholder: 'Primary Approver - e.g. corp/jdoe123'
+          pattern: '^corp\/[a-zA-Z0-9]{7}$'
+          minLength: 12
+          maxLength: 12
+          ui:help: 'Network ID should be prefixed by corp/ and have 12 chars'
+
+        # ── Secondary Approver ────────────────────────────────────────────
+        adGroupSecondaryApprover:
+          title: 'Enter Your AD Groups Secondary Approver *'
+          type: string
+          description: 'Secondary approver network ID — must be prefixed with corp/ and be exactly 12 characters (e.g. corp/jsmith7)'
+          default: 'corp/'
+          ui:placeholder: 'Secondary Approver - e.g. corp/jsmith7'
+          pattern: '^corp\/[a-zA-Z0-9]{7}$'
+          minLength: 12
+          maxLength: 12
+          ui:help: 'Network ID should be prefixed by corp/ and have 12 chars'
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # STEPS
+  # ─────────────────────────────────────────────────────────────────────────
+  steps:
+    - id: trigger_pipeline
+      name: Submit for Cloud Architect Approval
+      action: trigger:harness-custom-pipeline
+      input:
+        url: "https://app.harness.io/ng/account/N2EzMWI4YjQtNDU4OS00Zj/org/default/projects/cfg-IDP-project/pipelines/platform_public_cloud_onboarding"
+        apikey: ${{ parameters.token }}
+        inputset:
+          applicationId:               ${{ parameters.applicationId }}
+          migratingFromOnPrem:         ${{ parameters.migratingFromOnPrem or false }}
+          migratingFromLegacyToBifrost: ${{ parameters.migratingFromLegacyToBifrost or false }}
+          migratingFromWorkloadToBifrost: ${{ parameters.migratingFromWorkloadToBifrost or false }}
+          hasAppOrWebServer:           ${{ parameters.hasAppOrWebServer or false }}
+          knowsPattern:                ${{ parameters.knowsPattern or false }}
+          pattern:                     ${{ parameters.pattern or '' }}
+          requestorEmail:              ${{ parameters.requestorEmail }}
+          cloudArchitectEmail:         ${{ parameters.cloudArchitectEmail }}
+          assignmentGroup:             ${{ parameters.assignmentGroup or '' }}
+          isbiaRiskRating:             ${{ parameters.isbiaRiskRating }}
+          port:                        ${{ parameters.port or '' }}
+          adGroupDelegators:           ${{ parameters.adGroupDelegators or '' }}
+          sameApproversForAll:         ${{ parameters.sameApproversForAll or false }}
+          cloudType:                   ${{ parameters.cloudType }}
+          deploymentDivision:          ${{ parameters.deploymentDivision }}
+          usesDatabase:                ${{ parameters.usesDatabase or false }}
+          databaseType:                ${{ parameters.databaseType or '' }}
+          dbEngine:                    ${{ parameters.dbEngine or '' }}
+          replicationRegion:           ${{ parameters.replicationRegion or '' }}
+          publicFacing:                ${{ parameters.publicFacing }}
+          createJiraStories:           ${{ parameters.createJiraStories or false }}
+          support:                     ${{ parameters.support }}
+          departmentNumber:            ${{ parameters.departmentNumber or '' }}
+          dataClass:                   ${{ parameters.dataClass }}
+          criticality:                 ${{ parameters.criticality }}
+          riskPartnersNid:             ${{ parameters.riskPartnersNid }}
+          domain:                      ${{ parameters.domain }}
+          adGroupPrimaryApprover:      ${{ parameters.adGroupPrimaryApprover }}
+          adGroupSecondaryApprover:    ${{ parameters.adGroupSecondaryApprover }}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # OUTPUT
+  # ─────────────────────────────────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pipeline Execution
+        url: ${{ steps.trigger_pipeline.output.PipelineUrl }}
+        icon: scaffolder
+    text:
+      - title: Onboarding Request Submitted Successfully
+        content: |
+          Your public cloud onboarding request has been submitted for **cloud architect approval**.
+
+          | Field | Value |
+          |-------|-------|
+          | Application ID | `${{ parameters.applicationId }}` |
+          | Cloud Type | `${{ parameters.cloudType }}` |
+          | Deployment Division | `${{ parameters.deploymentDivision }}` |
+          | Pattern | `${{ parameters.pattern or 'TBD by Platform Engineering' }}` |
+          | ISBIA Risk Rating | `${{ parameters.isbiaRiskRating }}` |
+          | Criticality | `${{ parameters.criticality }}` |
+          | Data Class | `${{ parameters.dataClass }}` |
+          | Public Facing | `${{ parameters.publicFacing }}` |
+          | Database | `${{ parameters.usesDatabase and (parameters.dbEngine or 'Yes') or 'No' }}` |
+          | Cloud Architect | `${{ parameters.cloudArchitectEmail }}` |
+
+          **What happens next:**
+          1. Pipeline validates application ID and approver network IDs
+          2. Cloud architect receives approval notification
+          3. **If approved** → infrastructure provisioned per selected pattern
+          4. **If rejected** → requestor receives email with reason
+          5. Jira stories created if requested
